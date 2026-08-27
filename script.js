@@ -13,19 +13,17 @@ document.addEventListener("DOMContentLoaded", function () {
 
   /* AI BUTONU */
 
-  if (aiBtn && panel) {
-
+if (aiBtn && panel) {
     aiBtn.addEventListener("click", function () {
-      panel.classList.add("active");
+        panel.classList.add("active");
 
-      if (input) {
-        setTimeout(function () {
-          input.focus();
-        }, 100);
-      }
+        if (input) {
+            setTimeout(function () {
+                input.focus();
+            }, 100);
+        }
     });
-
-  }
+}
 
   /* AI KAPAT */
 
