@@ -152,6 +152,188 @@
 
   <script src="config.js"></script>
   <script src="script.js"></script>
+<style>
+.nexa-ai-panel{
+  position:fixed;
+  inset:0;
+  background:rgba(5,8,20,.78);
+  backdrop-filter:blur(10px);
+  display:none;
+  align-items:flex-end;
+  justify-content:center;
+  z-index:99999;
+}
 
+.nexa-ai-panel.active{
+  display:flex;
+}
+
+.nexa-ai-box{
+  width:min(700px,100%);
+  height:min(680px,92vh);
+  background:#0d1224;
+  border:1px solid #343d68;
+  border-radius:28px 28px 0 0;
+  box-shadow:0 -20px 70px rgba(70,90,255,.22);
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  color:white;
+  font-family:Arial,sans-serif;
+}
+
+.nexa-ai-head{
+  padding:20px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  border-bottom:1px solid #252d4c;
+}
+
+.nexa-ai-title{
+  font-size:20px;
+  font-weight:bold;
+}
+
+.nexa-ai-status{
+  font-size:12px;
+  color:#9da8d9;
+  margin-top:4px;
+}
+
+.nexa-ai-close{
+  width:42px;
+  height:42px;
+  border:0;
+  border-radius:50%;
+  background:#1b2340;
+  color:white;
+  font-size:24px;
+}
+
+.nexa-ai-messages{
+  flex:1;
+  padding:20px;
+  overflow-y:auto;
+}
+
+.nexa-msg{
+  max-width:85%;
+  padding:13px 16px;
+  margin-bottom:12px;
+  border-radius:18px;
+  line-height:1.5;
+  white-space:pre-wrap;
+}
+
+.nexa-msg.ai{
+  background:#171f3b;
+  border:1px solid #29335b;
+}
+
+.nexa-msg.user{
+  margin-left:auto;
+  background:#5865f2;
+}
+
+.nexa-ai-input{
+  display:flex;
+  gap:10px;
+  padding:15px;
+  border-top:1px solid #252d4c;
+}
+
+.nexa-ai-input textarea{
+  flex:1;
+  resize:none;
+  min-height:48px;
+  max-height:120px;
+  border:1px solid #303a62;
+  border-radius:16px;
+  padding:14px;
+  background:#11172b;
+  color:white;
+  outline:none;
+  font-size:15px;
+}
+
+.nexa-ai-send{
+  width:55px;
+  border:0;
+  border-radius:16px;
+  background:#ffffff;
+  color:#101426;
+  font-size:20px;
+  font-weight:bold;
+}
+</style>
+
+<div class="nexa-ai-panel" id="nexaAiPanel">
+  <div class="nexa-ai-box">
+
+    <div class="nexa-ai-head">
+      <div>
+        <div class="nexa-ai-title">✦ NEXA-AL AI</div>
+        <div class="nexa-ai-status">Dijital asistanın hazır</div>
+      </div>
+
+      <button class="nexa-ai-close" id="nexaAiClose">×</button>
+    </div>
+
+    <div class="nexa-ai-messages" id="nexaAiMessages">
+      <div class="nexa-msg ai">
+        Merhaba 👋 Ben NEXA-AL AI.
+        Sana nasıl yardımcı olabilirim?
+      </div>
+    </div>
+
+    <div class="nexa-ai-input">
+      <textarea
+        id="nexaAiInput"
+        placeholder="NEXA-AL'a bir şey sor..."
+      ></textarea>
+
+      <button class="nexa-ai-send" id="nexaAiSend">
+        ➤
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function(){
+
+  const panel = document.getElementById("nexaAiPanel");
+  const closeBtn = document.getElementById("nexaAiClose");
+  const sendBtn = document.getElementById("nexaAiSend");
+  const input = document.getElementById("nexaAiInput");
+  const messages = document.getElementById("nexaAiMessages");
+
+  const aiButton = document.getElementById("aiBtn");
+
+  if(aiButton){
+    aiButton.onclick = function(){
+      panel.classList.add("active");
+      input.focus();
+    };
+  }
+
+  closeBtn.onclick = function(){
+    panel.classList.remove("active");
+  };
+
+  panel.addEventListener("click", function(e){
+    if(e.target === panel){
+      panel.classList.remove("active");
+    }
+  });
+
+  function addMessage(text,type){
+    const div = document.createElement("div");
+    div.className = "nexa-msg " + type;
+    div.textContent = text;
+    messages.appendChild(div);
+    messages.scrollTop
 </body>
 </html>
