@@ -68,44 +68,33 @@ if (aiBtn && panel) {
 
   /* BASİT AI CEVAPLARI */
 
-  function getAnswer(text) {
+ async function getAnswer(text) {
+  try {
+    const response = await fetch("BACKEND_URL_BURAYA", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        message: text
+      })
+    });
 
-    const message = text.toLowerCase();
-
-    if (
-      message.includes("merhaba") ||
-      message.includes("selam")
-    ) {
-      return "Merhaba 👋 Ben NEXA-AL AI. Sana nasıl yardımcı olabilirim?";
+    if (!response.ok) {
+      throw new Error("Sunucu hatası");
     }
 
-    if (
-      message.includes("kimsin") ||
-      message.includes("nesin")
-    ) {
-      return "Ben NEXA-AL AI 🤖 Yeni nesil dijital asistanın.";
-    }
-
-    if (
-      message.includes("nasılsın") ||
-      message.includes("nasilsin")
-    ) {
-      return "Gayet iyiyim! 🚀 Senin için çalışmaya hazırım.";
-    }
-
-    if (
-      message.includes("nexa") ||
-      message.includes("nexa-al")
-    ) {
-      return "Buradayım. NEXA-AL'ın AI sistemi aktif. ✨";
-    }
-
-    return "Mesajını aldım. 🤖 Gerçek AI motoruna bağlandığımda sana çok daha gelişmiş cevaplar vereceğim.";
+    const data = await response.json();
+    return data.reply || "NEXA-AL şu anda cevap veremiyor.";
+  } catch (error) {
+    console.error("NEXA-AL AI hatası:", error);
+    return "Üzgünüm, AI bağlantısında bir sorun oluştu.";
   }
+} 
 
   /* MESAJ GÖNDER */
 
-  function sendMessage() {
+  async function sendMessage() {
 
     if (!input) return;
 
@@ -117,9 +106,9 @@ if (aiBtn && panel) {
 
     input.value = "";
 
-    setTimeout(function () {
+    setTimeout(async function () {
 
-      const answer = getAnswer(text);
+      const answer = await getAnswer(text);
 
       addMessage(answer, "ai");
 
