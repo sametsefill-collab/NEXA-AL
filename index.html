@@ -301,39 +301,6 @@
   </div>
 </div>
 
-<script>
-(function(){
 
-  const panel = document.getElementById("nexaAiPanel");
-  const closeBtn = document.getElementById("nexaAiClose");
-  const sendBtn = document.getElementById("nexaAiSend");
-  const input = document.getElementById("nexaAiInput");
-  const messages = document.getElementById("nexaAiMessages");
-
-  const aiButton = document.getElementById("aiBtn");
-
-  if(aiButton){
-    aiButton.onclick = function(){
-      panel.classList.add("active");
-      input.focus();
-    };
-  }
-
-  closeBtn.onclick = function(){
-    panel.classList.remove("active");
-  };
-
-  panel.addEventListener("click", function(e){
-    if(e.target === panel){
-      panel.classList.remove("active");
-    }
-  });
-
-  function addMessage(text,type){
-    const div = document.createElement("div");
-    div.className = "nexa-msg " + type;
-    div.textContent = text;
-    messages.appendChild(div);
-    messages.scrollTop
 </body>
 </html>
