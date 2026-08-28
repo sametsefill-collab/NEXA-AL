@@ -35,10 +35,11 @@ module.exports = async (req, res) => {
     const data = await response.json();
 
     if (!response.ok) {
-      console.error(data);
-      return res.status(500).json({
-        error: "OpenAI bağlantı hatası."
-      });
+  console.error(data);
+  return res.status(response.status).json({
+    error: data?.error?.message || "OpenAI bağlantı hatası."
+  });
+}
     }
 
     const reply =
