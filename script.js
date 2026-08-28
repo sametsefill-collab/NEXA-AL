@@ -70,7 +70,7 @@ if (aiBtn && panel) {
 
  async function getAnswer(text) {
   try {
-    const response = await fetch("https://nexa-al.vercel.app/api/chat" {
+    const response = await fetch("https://nexa-al.vercel.app/api/chat", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
