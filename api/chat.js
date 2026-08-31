@@ -40,8 +40,7 @@ module.exports = async (req, res) => {
     error: data?.error?.message || "OpenAI bağlantı hatası."
   });
 }
-    }
-
+    
     const reply =
       data.output
         ?.flatMap(item => item.content || [])
