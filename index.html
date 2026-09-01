@@ -1,240 +1,329 @@
-document.addEventListener("DOMContentLoaded", function () {
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  console.log("NEXA-AL başlatıldı.");
+  <title>NEXA-AL</title>
 
-  const aiBtn = document.getElementById("aiBtn");
-  const startBtn = document.getElementById("startBtn");
-  const exploreBtn = document.getElementById("exploreBtn");
-  const menuBtn = document.getElementById("menuBtn");
+  <link rel="stylesheet" href="style.css">
+</head>
 
-  const panel = document.getElementById("nexaAiPanel");
-  const closeBtn = document.getElementById("nexaAiClose");
-  const sendBtn = document.getElementById("nexaAiSend");
-  const input = document.getElementById("nexaAiInput");
-  const messages = document.getElementById("nexaAiMessages");
+<body>
+
+  <header class="topbar">
+
+    <div class="logo">
+      <span class="logo-icon">N</span>
+      <span>NEXA-AL</span>
+    </div>
+
+    <button class="menu-btn" id="menuBtn">
+      ☰
+    </button>
+
+  </header>
 
 
-  /* AI PANELİNİ AÇ */
+  <main>
 
-  function openAiPanel() {
+    <!-- HERO -->
 
-    if (!panel) return;
+    <section class="hero">
 
-    panel.classList.add("active");
+      <div class="badge">
+        ✦ Yeni nesil dijital platform
+      </div>
 
-    if (input) {
-      setTimeout(function () {
-        input.focus();
-      }, 100);
+      <h1>
+        Geleceğin<br>
+        <span>akıllı dünyası.</span>
+      </h1>
+
+      <p>
+        NEXA-AL ile fikirlerini, projelerini ve
+        dijital deneyimlerini tek bir yerde buluştur.
+      </p>
+
+      <div class="hero-buttons">
+
+        <button class="primary-btn" id="startBtn">
+          Başla
+          <span>→</span>
+        </button>
+
+        <button class="secondary-btn" id="exploreBtn">
+          Keşfet
+        </button>
+
+      </div>
+
+    </section>
+
+
+    <!-- FEATURES -->
+
+    <section class="features">
+
+      <div class="section-title">
+        <span>✦</span>
+        NEXA-AL
+      </div>
+
+      <div class="cards">
+
+        <div class="card">
+
+          <div class="card-icon">🤖</div>
+
+          <h3>Yapay Zekâ</h3>
+
+          <p>
+            Akıllı araçlarla fikirlerini
+            gerçeğe dönüştür.
+          </p>
+
+        </div>
+
+
+        <div class="card">
+
+          <div class="card-icon">⚡</div>
+
+          <h3>Hızlı</h3>
+
+          <p>
+            Modern ve hızlı dijital
+            deneyim.
+          </p>
+
+        </div>
+
+
+        <div class="card">
+
+          <div class="card-icon">🔐</div>
+
+          <h3>Güvenli</h3>
+
+          <p>
+            Verilerini koruyan
+            güvenli altyapı.
+          </p>
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- AI -->
+
+    <section class="ai-box">
+
+      <div class="ai-symbol">
+        ✦
+      </div>
+
+      <h2>NEXA-AL AI</h2>
+
+      <p>
+        Dijital asistanınla tanış.
+      </p>
+
+      <button class="ai-btn" id="aiBtn">
+        AI'ı Aç →
+      </button>
+
+    </section>
+
+  </main>
+
+
+  <footer>
+
+    <p>© 2026 NEXA-AL</p>
+
+    <p>Yeni nesil dijital platform.</p>
+
+  </footer>
+
+
+  <!-- NEXA-AL AI PANEL -->
+
+  <style>
+    .nexa-ai-panel {
+      position: fixed;
+      inset: 0;
+      background: rgba(5,8,20,.78);
+      backdrop-filter: blur(10px);
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+      z-index: 99999;
     }
-  }
 
-
-  /* BAŞLA BUTONU */
-
-  if (startBtn) {
-
-    startBtn.addEventListener("click", function () {
-      openAiPanel();
-    });
-
-  }
-
-
-  /* AI BUTONU */
-
-  if (aiBtn) {
-
-    aiBtn.addEventListener("click", function () {
-      openAiPanel();
-    });
-
-  }
-
-
-  /* KEŞFET BUTONU */
-
-  if (exploreBtn) {
-
-    exploreBtn.addEventListener("click", function () {
-
-      const features = document.querySelector(".features");
-
-      if (features) {
-        features.scrollIntoView({
-          behavior: "smooth"
-        });
-      }
-
-    });
-
-  }
-
-
-  /* AI KAPAT */
-
-  if (closeBtn && panel) {
-
-    closeBtn.addEventListener("click", function () {
-      panel.classList.remove("active");
-    });
-
-  }
-
-
-  /* PANEL DIŞINA TIKLAMA */
-
-  if (panel) {
-
-    panel.addEventListener("click", function (event) {
-
-      if (event.target === panel) {
-        panel.classList.remove("active");
-      }
-
-    });
-
-  }
-
-
-  /* MESAJ EKLE */
-
-  function addMessage(text, type) {
-
-    if (!messages) return;
-
-    const message = document.createElement("div");
-
-    message.className = "nexa-msg " + type;
-
-    message.textContent = text;
-
-    messages.appendChild(message);
-
-    messages.scrollTop = messages.scrollHeight;
-  }
-
-
-  /* AI CEVABI */
-
-  async function getAnswer(text) {
-
-    try {
-
-      const response = await fetch(
-        "https://nexa-al.vercel.app/api/chat",
-        {
-          method: "POST",
-
-          headers: {
-            "Content-Type": "application/json"
-          },
-
-          body: JSON.stringify({
-            message: text
-          })
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Sunucu hatası");
-      }
-
-      const data = await response.json();
-
-      return data.reply ||
-        "NEXA-AL şu anda cevap veremiyor.";
-
-    } catch (error) {
-
-      console.error(
-        "NEXA-AL AI hatası:",
-        error
-      );
-
-      return "Üzgünüm, AI bağlantısında bir sorun oluştu.";
+    .nexa-ai-panel.active {
+      display: flex;
     }
 
-  }
+    .nexa-ai-box {
+      width: min(700px,100%);
+      height: min(680px,92vh);
+      background: #0d1224;
+      border: 1px solid #343d68;
+      border-radius: 28px 28px 0 0;
+      box-shadow: 0 -20px 70px rgba(70,90,255,.22);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      color: white;
+      font-family: Arial,sans-serif;
+    }
+
+    .nexa-ai-head {
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #252d4c;
+    }
+
+    .nexa-ai-title {
+      font-size: 20px;
+      font-weight: bold;
+    }
+
+    .nexa-ai-status {
+      font-size: 12px;
+      color: #9da8d9;
+      margin-top: 4px;
+    }
+
+    .nexa-ai-close {
+      width: 42px;
+      height: 42px;
+      border: 0;
+      border-radius: 50%;
+      background: #1b2340;
+      color: white;
+      font-size: 24px;
+    }
+
+    .nexa-ai-messages {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+    }
+
+    .nexa-msg {
+      max-width: 85%;
+      padding: 13px 16px;
+      margin-bottom: 12px;
+      border-radius: 18px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+    }
+
+    .nexa-msg.ai {
+      background: #171f3b;
+      border: 1px solid #29335b;
+    }
+
+    .nexa-msg.user {
+      margin-left: auto;
+      background: #5865f2;
+    }
+
+    .nexa-ai-input {
+      display: flex;
+      gap: 10px;
+      padding: 15px;
+      border-top: 1px solid #252d4c;
+    }
+
+    .nexa-ai-input textarea {
+      flex: 1;
+      resize: none;
+      min-height: 48px;
+      max-height: 120px;
+      border: 1px solid #303a62;
+      border-radius: 16px;
+      padding: 14px;
+      background: #11172b;
+      color: white;
+      outline: none;
+      font-size: 15px;
+    }
+
+    .nexa-ai-send {
+      width: 55px;
+      border: 0;
+      border-radius: 16px;
+      background: #ffffff;
+      color: #101426;
+      font-size: 20px;
+      font-weight: bold;
+    }
+  </style>
 
 
-  /* MESAJ GÖNDER */
+  <div class="nexa-ai-panel" id="nexaAiPanel">
 
-  async function sendMessage() {
+    <div class="nexa-ai-box">
 
-    if (!input) return;
+      <div class="nexa-ai-head">
 
-    const text = input.value.trim();
+        <div>
+          <div class="nexa-ai-title">
+            ✦ NEXA-AL AI
+          </div>
 
-    if (!text) return;
+          <div class="nexa-ai-status">
+            Dijital asistanın hazır
+          </div>
+        </div>
 
-    addMessage(text, "user");
+        <button class="nexa-ai-close" id="nexaAiClose">
+          ×
+        </button>
 
-    input.value = "";
-
-    setTimeout(async function () {
-
-      const answer = await getAnswer(text);
-
-      addMessage(answer, "ai");
-
-    }, 500);
-
-  }
+      </div>
 
 
-  /* GÖNDER BUTONU */
+      <div class="nexa-ai-messages" id="nexaAiMessages">
 
-  if (sendBtn) {
+        <div class="nexa-msg ai">
+          Merhaba 👋 Ben NEXA-AL AI.
+          Sana nasıl yardımcı olabilirim?
+        </div>
 
-    sendBtn.addEventListener(
-      "click",
-      sendMessage
-    );
-
-  }
+      </div>
 
 
-  /* ENTER */
+      <div class="nexa-ai-input">
 
-  if (input) {
+        <textarea
+          id="nexaAiInput"
+          placeholder="NEXA-AL'a bir şey sor..."
+        ></textarea>
 
-    input.addEventListener(
-      "keydown",
-      function (event) {
+        <button class="nexa-ai-send" id="nexaAiSend">
+          ➤
+        </button>
 
-        if (
-          event.key === "Enter" &&
-          !event.shiftKey
-        ) {
+      </div>
 
-          event.preventDefault();
+    </div>
 
-          sendMessage();
-
-        }
-
-      }
-    );
-
-  }
+  </div>
 
 
-  /* MENÜ */
+  <!-- JAVASCRIPT DOSYALARI -->
 
-  if (menuBtn) {
+  <script src="config.js"></script>
+  <script src="script.js"></script>
 
-    menuBtn.addEventListener(
-      "click",
-      function () {
-
-        alert(
-          "NEXA-AL menüsü yakında aktif olacak. 🚀"
-        );
-
-      }
-    );
-
-  }
-
-});
+</body>
+</html>
