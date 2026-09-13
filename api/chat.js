@@ -1,40 +1,77 @@
 module.exports = async (req, res) => {
 
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  // =========================
+  // CORS
+  // =========================
 
+  res.setHeader(
+    "Access-Control-Allow-Origin",
+    "*"
+  );
+
+  res.setHeader(
+    "Access-Control-Allow-Methods",
+    "POST, OPTIONS"
+  );
+
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "Content-Type"
+  );
+
+
+  // OPTIONS
   if (req.method === "OPTIONS") {
     return res.status(200).end();
   }
 
+
+  // Sadece POST
   if (req.method !== "POST") {
     return res.status(405).json({
       error: "Sadece POST destekleniyor."
     });
   }
 
+
   try {
 
-    const { message, history = [] } = req.body || {};
+    // =========================
+    // API KEY KONTROLÜ
+    // =========================
 
-    /* =========================
-       API KEY KONTROLÜ
-    ========================= */
+    const apiKey =
+      process.env.GEMINI_API_KEY;
 
-    if (!process.env.GEMINI_API_KEY) {
+    if (!apiKey) {
+
+      console.error(
+        "GEMINI_API_KEY bulunamadı."
+      );
 
       return res.status(500).json({
-        error: "GEMINI_API_KEY bulunamadı. Vercel Environment Variables kontrol edilmeli."
+        error:
+          "NEXA-AL yapılandırma hatası: Gemini API anahtarı bulunamadı."
       });
 
     }
 
-    /* =========================
-       MESAJ KONTROLÜ
-    ========================= */
 
-    if (!message || !message.trim()) {
+    // =========================
+    // GELEN VERİ
+    // =========================
+
+    const {
+      message,
+      history = []
+    } = req.body || {};
+
+
+    if (
+      !message ||
+      typeof message !== "string" ||
+      !message.trim()
+    ) {
 
       return res.status(400).json({
         error: "Mesaj gerekli."
@@ -42,22 +79,39 @@ module.exports = async (req, res) => {
 
     }
 
-    /* =========================
-       GEÇMİŞİ SINIRLA
-    ========================= */
 
-    const safeHistory = Array.isArray(history)
-      ? history.slice(-20)
-      : [];
+    // =========================
+    // KONUŞMA GEÇMİŞİ
+    // =========================
 
-    /* =========================
-       GEMINI İÇERİĞİ
-    ========================= */
+    let cleanHistory = [];
+
+    if (Array.isArray(history)) {
+
+      cleanHistory = history
+        .filter(item =>
+          item &&
+          (
+            item.role === "user" ||
+            item.role === "model"
+          ) &&
+          Array.isArray(item.parts)
+        )
+        .slice(-20);
+
+    }
+
+
+    // =========================
+    // GEMINI İÇERİĞİ
+    // =========================
 
     const contents = [
-      ...safeHistory,
+      ...cleanHistory,
+
       {
         role: "user",
+
         parts: [
           {
             text: message.trim()
@@ -66,160 +120,201 @@ module.exports = async (req, res) => {
       }
     ];
 
-    /* =========================
-       GEMINI API
-    ========================= */
+
+    // =========================
+    // GEMINI 3.6 FLASH
+    // =========================
 
     const response = await fetch(
       "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent",
       {
+
         method: "POST",
 
         headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": process.env.GEMINI_API_KEY
+
+          "Content-Type":
+            "application/json",
+
+          "x-goog-api-key":
+            apiKey
+
         },
 
         body: JSON.stringify({
 
           system_instruction: {
+
             parts: [
+
               {
                 text:
-                  "Sen NEXA-AL adlı Türkçe konuşan akıllı dijital asistansın. " +
-                  "Kullanıcıya Türkçe, samimi, anlaşılır ve faydalı cevaplar ver. " +
-                  "Konuşma geçmişini dikkate al. " +
-                  "Kullanıcı adını veya daha önce söylediği bilgileri geçmişte görüyorsan hatırla. " +
-                  "Kendini NEXA-AL olarak tanıt."
+                  "Sen NEXA-AL adlı Türkçe konuşan " +
+                  "akıllı dijital asistansın. " +
+
+                  "Kullanıcıya Türkçe, anlaşılır, " +
+                  "samimi ve faydalı cevaplar ver. " +
+
+                  "Kullanıcının konuşma geçmişini dikkate al. " +
+
+                  "Önceki mesajlarla bağlantılı sorulara " +
+                  "tutarlı cevaplar ver. " +
+
+                  "Kullanıcı adını, tercihlerini veya " +
+                  "daha önce söylediği bilgileri " +
+                  "konuşma geçmişinde görüyorsan " +
+                  "bunları uygun şekilde kullan. " +
+
+                  "Gereksiz yere aynı soruları tekrar sorma. " +
+
+                  "Kısa sorulara gereksiz uzun cevaplar verme. " +
+
+                  "Samimi ama güvenilir bir dijital asistan gibi davran."
               }
+
             ]
+
           },
 
-          contents: contents,
-
-          generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 500
-          }
+          contents
 
         })
+
       }
     );
 
-    /* =========================
-       GEMINI CEVABINI OKU
-    ========================= */
 
-    const data = await response.json();
+    // =========================
+    // GEMINI CEVABI
+    // =========================
 
+    const data =
+      await response.json();
+
+
+    // LOG
     console.log(
       "Gemini HTTP:",
       response.status
     );
 
-    console.log(
-      "Gemini response:",
-      JSON.stringify(data)
-    );
 
-    /* =========================
-       KOTA
-    ========================= */
+    // =========================
+    // KOTA / RATE LIMIT
+    // =========================
 
     if (response.status === 429) {
 
+      console.error(
+        "Gemini kota/rate limit:",
+        data
+      );
+
       return res.status(429).json({
+
         error:
-          "Gemini API kotası dolmuş. " +
-          "Bir süre beklemek veya Gemini API kota/plan ayarlarını kontrol etmek gerekiyor."
+          "NEXA-AL şu anda Gemini kullanım kotasına ulaştı. " +
+          "Biraz sonra tekrar deneyelim. ⏳"
+
       });
 
     }
 
-    /* =========================
-       API KEY / YETKİ
-    ========================= */
 
-    if (
-      response.status === 401 ||
-      response.status === 403
-    ) {
-
-      return res.status(response.status).json({
-        error:
-          "Gemini API anahtarı geçersiz veya bu API anahtarının Gemini API erişiminde bir sorun var."
-      });
-
-    }
-
-    /* =========================
-       MODEL / İSTEK HATASI
-    ========================= */
+    // =========================
+    // MODEL / API HATASI
+    // =========================
 
     if (!response.ok) {
 
-      const googleError =
-        data?.error?.message ||
-        "Google bilinmeyen bir hata döndürdü.";
+      console.error(
+        "Gemini API hatası:",
+        JSON.stringify(data, null, 2)
+      );
 
-      return res.status(response.status).json({
+      const apiError =
+        data?.error?.message ||
+        "Bilinmeyen Gemini API hatası.";
+
+      return res.status(
+        response.status
+      ).json({
 
         error:
-          "Gemini API hatası (" +
-          response.status +
-          "): " +
-          googleError
+          "NEXA-AL AI bağlantısında sorun oluştu.\n\n" +
+          apiError
 
       });
 
     }
 
-    /* =========================
-       CEVABI AL
-    ========================= */
+
+    // =========================
+    // CEVABI ÇIKAR
+    // =========================
 
     const reply =
-      data?.candidates?.[0]?.content?.parts
-        ?.map(part => part.text || "")
+      data
+        ?.candidates?.[0]
+        ?.content
+        ?.parts
+        ?.map(
+          part => part.text || ""
+        )
         .join("")
         .trim();
+
+
+    // =========================
+    // BOŞ CEVAP
+    // =========================
 
     if (!reply) {
 
       console.error(
-        "Gemini cevap üretmedi:",
-        JSON.stringify(data)
+        "Gemini boş cevap döndürdü:",
+        data
       );
 
       return res.status(200).json({
+
         reply:
-          "NEXA-AL şu anda cevap oluşturamadı."
+          "NEXA-AL şu anda cevap oluşturamadı. " +
+          "Bir kez daha deneyelim."
+
       });
 
     }
 
-    /* =========================
-       BAŞARILI
-    ========================= */
+
+    // =========================
+    // BAŞARILI
+    // =========================
 
     return res.status(200).json({
+
       reply: reply
+
     });
 
-  }
 
-  catch (error) {
+  } catch (error) {
+
+    // =========================
+    // SUNUCU HATASI
+    // =========================
 
     console.error(
-      "NEXA-AL SUNUCU HATASI:",
+      "NEXA-AL sunucu hatası:",
       error
     );
+
 
     return res.status(500).json({
 
       error:
-        "Sunucuda beklenmeyen bir hata oluştu: " +
-        error.message
+        "NEXA-AL AI bağlantısında bir sorun oluştu. " +
+        "Lütfen biraz sonra tekrar dene."
 
     });
 
