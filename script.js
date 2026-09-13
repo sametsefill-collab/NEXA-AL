@@ -15,26 +15,53 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
   /* =========================
-     KONUŞMA HAFIZASI
+     AYARLAR
   ========================= */
 
+  const STORAGE_KEY = "nexa_al_history";
+
+  // Hafızanın gereksiz büyümesini engeller.
+  // 12 mesaj = yaklaşık 6 kullanıcı + 6 AI mesajı.
+  const MAX_HISTORY = 12;
+
   let history = [];
+  let isSending = false;
+
+
+  /* =========================
+     KONUŞMA HAFIZASINI YÜKLE
+  ========================= */
 
   try {
 
     const savedHistory =
-      localStorage.getItem("nexa_al_history");
+      localStorage.getItem(STORAGE_KEY);
 
     if (savedHistory) {
 
-      history = JSON.parse(savedHistory);
+      const parsedHistory =
+        JSON.parse(savedHistory);
+
+      if (Array.isArray(parsedHistory)) {
+
+        history =
+          parsedHistory
+            .filter(item =>
+              item &&
+              (item.role === "user" ||
+               item.role === "model") &&
+              Array.isArray(item.parts)
+            )
+            .slice(-MAX_HISTORY);
+
+      }
 
     }
 
   } catch (error) {
 
     console.error(
-      "Hafıza okunamadı:",
+      "NEXA-AL hafızası okunamadı:",
       error
     );
 
@@ -43,19 +70,26 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
 
+  /* =========================
+     HAFIZAYI KAYDET
+  ========================= */
+
   function saveHistory() {
 
     try {
 
+      history =
+        history.slice(-MAX_HISTORY);
+
       localStorage.setItem(
-        "nexa_al_history",
+        STORAGE_KEY,
         JSON.stringify(history)
       );
 
     } catch (error) {
 
       console.error(
-        "Hafıza kaydedilemedi:",
+        "NEXA-AL hafızası kaydedilemedi:",
         error
       );
 
@@ -230,75 +264,68 @@ document.addEventListener("DOMContentLoaded", function () {
      API'DEN CEVAP AL
   ========================= */
 
-  async function getAnswer(text) {
+  async function getAnswer(text, oldHistory) {
+
+    const response = await fetch(
+      "/api/chat",
+      {
+        method: "POST",
+
+        headers: {
+          "Content-Type": "application/json"
+        },
+
+        body: JSON.stringify({
+
+          message: text,
+
+          history: oldHistory
+
+        })
+
+      }
+    );
+
+
+    let data = {};
 
     try {
 
-      const response = await fetch(
-        "/api/chat",
-        {
-          method: "POST",
+      data = await response.json();
 
-          headers: {
-            "Content-Type": "application/json"
-          },
-
-          body: JSON.stringify({
-
-            message: text,
-
-            /*
-             * ÖNCEKİ KONUŞMALAR
-             * BURADA API'YE GİDİYOR
-             */
-            history: history
-
-          })
-
-        }
-      );
-
-
-      const data =
-        await response.json();
-
-
-      if (!response.ok) {
-
-        console.error(
-          "API hatası:",
-          data
-        );
-
-        throw new Error(
-          data?.error ||
-          "Sunucu hatası: " +
-          response.status
-        );
-
-      }
-
-
-      return data.reply ||
-        "NEXA-AL şu anda cevap veremiyor.";
-
-    }
-
-    catch (error) {
+    } catch (error) {
 
       console.error(
-        "NEXA-AL AI hatası:",
+        "API cevabı JSON değil:",
         error
       );
 
-      return (
-        "Üzgünüm, AI bağlantısında " +
-        "bir sorun oluştu.\n\n" +
-        "Hata: " +
-        error.message
+    }
+
+
+    if (!response.ok) {
+
+      console.error(
+        "NEXA-AL API hatası:",
+        data
       );
 
+      const error =
+        new Error(
+          data?.error ||
+          "Sunucu hatası."
+        );
+
+      error.status =
+        response.status;
+
+      throw error;
+
     }
+
+
+    return data.reply ||
+      "NEXA-AL şu anda cevap oluşturamadı.";
 
   }
 
@@ -311,47 +338,56 @@ document.addEventListener("DOMContentLoaded", function () {
 
     if (!input) return;
 
+    // Aynı anda iki istek gönderilmesini engeller.
+    if (isSending) return;
+
+
     const text =
       input.value.trim();
+
 
     if (!text) return;
 
 
-    /* Kullanıcı mesajını ekrana yaz */
+    isSending = true;
 
+
+    // Butonu geçici olarak pasifleştir.
+    if (sendBtn) {
+
+      sendBtn.disabled = true;
+      sendBtn.style.opacity = "0.5";
+
+    }
+
+
+    // Kullanıcı mesajını ekrana göster.
     addMessage(
       text,
       "user"
     );
 
+
     input.value = "";
 
 
-    /* API'ye gönderilecek eski geçmiş */
+    /*
+     * API'YE GÖNDERECEĞİMİZ GEÇMİŞ
+     *
+     * Yeni kullanıcı mesajını burada
+     * history'ye eklemiyoruz.
+     *
+     * Çünkü /api/chat zaten mevcut
+     * mesajı kendisi contents'e ekliyor.
+     */
 
-    const previousHistory =
-      [...history];
-
-
-    /* Kullanıcı mesajını hafızaya ekle */
-
-    history.push({
-
-      role: "user",
-
-      parts: [
-        {
-          text: text
-        }
-      ]
-
-    });
+    const oldHistory =
+      history.slice(-MAX_HISTORY);
 
 
-    saveHistory();
-
-
-    /* Yükleniyor mesajı */
+    /* =========================
+       YÜKLENİYOR
+    ========================= */
 
     const loadingMessage =
       document.createElement("div");
@@ -375,131 +411,164 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
 
-    /*
-     * API'YE ESKİ GEÇMİŞİ GÖNDERİYORUZ.
-     * Mevcut mesaj API tarafından
-     * ayrıca eklenecek.
-     */
-
-    const oldHistory =
-      history.slice(0, -1);
-
-
-    const answer =
-      await getAnswerWithHistory(
-        text,
-        oldHistory
-      );
-
-
-    /* Loading kaldır */
-
-    if (loadingMessage) {
-
-      loadingMessage.remove();
-
-    }
-
-
-    /* Cevabı ekrana yaz */
-
-    addMessage(
-      answer,
-      "ai"
-    );
-
-
-    /* AI cevabını hafızaya ekle */
-
-    history.push({
-
-      role: "model",
-
-      parts: [
-        {
-          text: answer
-        }
-      ]
-
-    });
-
-
-    saveHistory();
-
-  }
-
-
-  /* =========================
-     API + HISTORY
-  ========================= */
-
-  async function getAnswerWithHistory(
-    text,
-    oldHistory
-  ) {
-
     try {
 
-      const response = await fetch(
-        "/api/chat",
-        {
+      /*
+       * TEK API ÇAĞRISI
+       */
 
-          method: "POST",
-
-          headers: {
-            "Content-Type": "application/json"
-          },
-
-          body: JSON.stringify({
-
-            message: text,
-
-            history: oldHistory
-
-          })
-
-        }
-      );
-
-
-      const data =
-        await response.json();
-
-
-      if (!response.ok) {
-
-        console.error(
-          "API hatası:",
-          data
+      const answer =
+        await getAnswer(
+          text,
+          oldHistory
         );
 
-        throw new Error(
-          data?.error ||
-          "Sunucu hatası: " +
-          response.status
-        );
+
+      /* Loading kaldır */
+
+      if (loadingMessage) {
+
+        loadingMessage.remove();
 
       }
 
 
-      return data.reply ||
-        "NEXA-AL cevap oluşturamadı.";
+      /* AI cevabını ekrana yaz */
 
-    }
+      addMessage(
+        answer,
+        "ai"
+      );
 
-    catch (error) {
+
+      /*
+       * API BAŞARILI OLDU.
+       *
+       * Ancak şimdi hafızaya ekliyoruz.
+       */
+
+      history.push({
+
+        role: "user",
+
+        parts: [
+          {
+            text: text
+          }
+        ]
+
+      });
+
+
+      history.push({
+
+        role: "model",
+
+        parts: [
+          {
+            text: answer
+          }
+        ]
+
+      });
+
+
+      /*
+       * Sadece son MAX_HISTORY
+       * mesajı sakla.
+       */
+
+      history =
+        history.slice(-MAX_HISTORY);
+
+
+      saveHistory();
+
+
+    } catch (error) {
+
+      /* Loading kaldır */
+
+      if (loadingMessage) {
+
+        loadingMessage.remove();
+
+      }
+
 
       console.error(
         "NEXA-AL bağlantı hatası:",
         error
       );
 
-      return (
-        "Üzgünüm, AI bağlantısında " +
-        "bir sorun oluştu.\n\n" +
-        "Hata: " +
-        error.message
+
+      let errorMessage =
+        "Üzgünüm, AI bağlantısında geçici bir sorun oluştu.";
+
+
+      /*
+       * KOTA HATASI
+       */
+
+      if (error.status === 429) {
+
+        errorMessage =
+          "NEXA-AL şu anda yoğun kullanım nedeniyle " +
+          "kısa süreliğine beklemede. ⏳\n\n" +
+          "Biraz sonra tekrar deneyebilirsin.";
+
+      }
+
+
+      /*
+       * Diğer sunucu hataları
+       */
+
+      else if (
+        error.status >= 500
+      ) {
+
+        errorMessage =
+          "NEXA-AL sunucusunda geçici bir sorun oluştu. " +
+          "Lütfen biraz sonra tekrar dene.";
+
+      }
+
+
+      addMessage(
+        errorMessage,
+        "ai"
       );
+
+
+      /*
+       * ÖNEMLİ:
+       *
+       * Hata alan mesajı hafızaya
+       * KAYDETMİYORUZ.
+       */
+
+    }
+
+
+    finally {
+
+      isSending = false;
+
+
+      if (sendBtn) {
+
+        sendBtn.disabled = false;
+        sendBtn.style.opacity = "1";
+
+      }
+
+
+      if (input) {
+
+        input.focus();
+
+      }
 
     }
 
@@ -577,7 +646,7 @@ document.addEventListener("DOMContentLoaded", function () {
       history = [];
 
       localStorage.removeItem(
-        "nexa_al_history"
+        STORAGE_KEY
       );
 
       console.log(
@@ -585,6 +654,13 @@ document.addEventListener("DOMContentLoaded", function () {
       );
 
     };
+
+
+  console.log(
+    "NEXA-AL hafızası yüklendi:",
+    history.length,
+    "mesaj"
+  );
 
 
 });
