@@ -14,13 +14,25 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const { message } = req.body || {};
+    const { message, history = [] } = req.body || {};
 
     if (!message) {
       return res.status(400).json({
         error: "Mesaj gerekli."
       });
     }
+
+    const contents = [
+      ...history,
+      {
+        role: "user",
+        parts: [
+          {
+            text: message
+          }
+        ]
+      }
+    ];
 
     const response = await fetch(
       "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent",
@@ -34,20 +46,15 @@ module.exports = async (req, res) => {
           system_instruction: {
             parts: [
               {
-                text: "Sen NEXA-AL adlı Türkçe konuşan akıllı dijital asistansın. Kullanıcıya Türkçe, anlaşılır, samimi ve faydalı cevaplar ver."
+                text:
+                  "Sen NEXA-AL adlı Türkçe konuşan akıllı dijital asistansın. " +
+                  "Kullanıcıya Türkçe, anlaşılır, samimi ve faydalı cevaplar ver. " +
+                  "Konuşma geçmişini dikkate al ve önceki mesajlarla bağlantılı sorulara " +
+                  "tutarlı cevaplar ver."
               }
             ]
           },
-          contents: [
-            {
-              role: "user",
-              parts: [
-                {
-                  text: message
-                }
-              ]
-            }
-          ]
+          contents
         })
       }
     );
@@ -68,7 +75,9 @@ module.exports = async (req, res) => {
         .join("") ||
       "NEXA-AL cevap oluşturamadı.";
 
-    return res.status(200).json({ reply });
+    return res.status(200).json({
+      reply
+    });
 
   } catch (error) {
     console.error(error);
