@@ -20,13 +20,19 @@ module.exports = async (req, res) => {
   );
 
 
+  // =========================
   // OPTIONS
+  // =========================
+
   if (req.method === "OPTIONS") {
     return res.status(200).end();
   }
 
 
-  // Sadece POST
+  // =========================
+  // SADECE POST
+  // =========================
+
   if (req.method !== "POST") {
     return res.status(405).json({
       error: "Sadece POST destekleniyor."
@@ -37,7 +43,7 @@ module.exports = async (req, res) => {
   try {
 
     // =========================
-    // API KEY KONTROLÜ
+    // API KEY
     // =========================
 
     const apiKey =
@@ -51,9 +57,8 @@ module.exports = async (req, res) => {
 
       return res.status(500).json({
         error:
-          "NEXA-AL yapılandırma hatası: Gemini API anahtarı bulunamadı."
+          "Gemini API anahtarı bulunamadı."
       });
-
     }
 
 
@@ -76,7 +81,6 @@ module.exports = async (req, res) => {
       return res.status(400).json({
         error: "Mesaj gerekli."
       });
-
     }
 
 
@@ -103,7 +107,7 @@ module.exports = async (req, res) => {
 
 
     // =========================
-    // GEMINI İÇERİĞİ
+    // GEMINI CONTENTS
     // =========================
 
     const contents = [
@@ -122,11 +126,11 @@ module.exports = async (req, res) => {
 
 
     // =========================
-    // GEMINI 3.6 FLASH
+    // GEMINI 3.5 FLASH-LITE
     // =========================
 
     const response = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent",
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
       {
 
         method: "POST",
@@ -155,21 +159,20 @@ module.exports = async (req, res) => {
                   "Kullanıcıya Türkçe, anlaşılır, " +
                   "samimi ve faydalı cevaplar ver. " +
 
-                  "Kullanıcının konuşma geçmişini dikkate al. " +
+                  "Konuşma geçmişini dikkate al. " +
 
-                  "Önceki mesajlarla bağlantılı sorulara " +
-                  "tutarlı cevaplar ver. " +
-
-                  "Kullanıcı adını, tercihlerini veya " +
+                  "Kullanıcının adını, tercihlerini ve " +
                   "daha önce söylediği bilgileri " +
-                  "konuşma geçmişinde görüyorsan " +
-                  "bunları uygun şekilde kullan. " +
+                  "geçmişte görüyorsan hatırla. " +
+
+                  "Önceki konuşmalarla bağlantılı " +
+                  "sorulara tutarlı cevaplar ver. " +
 
                   "Gereksiz yere aynı soruları tekrar sorma. " +
 
-                  "Kısa sorulara gereksiz uzun cevaplar verme. " +
+                  "Kısa sorulara kısa ve net cevap ver. " +
 
-                  "Samimi ama güvenilir bir dijital asistan gibi davran."
+                  "Samimi, doğal ve yardımcı ol."
               }
 
             ]
@@ -192,7 +195,6 @@ module.exports = async (req, res) => {
       await response.json();
 
 
-    // LOG
     console.log(
       "Gemini HTTP:",
       response.status
@@ -200,64 +202,61 @@ module.exports = async (req, res) => {
 
 
     // =========================
-    // KOTA / RATE LIMIT
+    // KOTA
     // =========================
 
     if (response.status === 429) {
 
       console.error(
-        "Gemini kota/rate limit:",
+        "Gemini kota hatası:",
         data
       );
 
       return res.status(429).json({
 
         error:
-          "NEXA-AL şu anda Gemini kullanım kotasına ulaştı. " +
+          "NEXA-AL kullanım sınırına ulaştı. " +
           "Biraz sonra tekrar deneyelim. ⏳"
 
       });
-
     }
 
 
     // =========================
-    // MODEL / API HATASI
+    // DİĞER API HATALARI
     // =========================
 
     if (!response.ok) {
 
       console.error(
         "Gemini API hatası:",
-        JSON.stringify(data, null, 2)
+        JSON.stringify(
+          data,
+          null,
+          2
+        )
       );
-
-      const apiError =
-        data?.error?.message ||
-        "Bilinmeyen Gemini API hatası.";
 
       return res.status(
         response.status
       ).json({
 
         error:
-          "NEXA-AL AI bağlantısında sorun oluştu.\n\n" +
-          apiError
+          data?.error?.message ||
+          "Gemini API bağlantısında bir sorun oluştu."
 
       });
-
     }
 
 
     // =========================
-    // CEVABI ÇIKAR
+    // CEVABI AL
     // =========================
 
     const reply =
       data
         ?.candidates?.[0]
-        ?.content
-        ?.parts
+        ?.content?.parts
         ?.map(
           part => part.text || ""
         )
@@ -272,7 +271,7 @@ module.exports = async (req, res) => {
     if (!reply) {
 
       console.error(
-        "Gemini boş cevap döndürdü:",
+        "Gemini boş cevap:",
         data
       );
 
@@ -280,10 +279,9 @@ module.exports = async (req, res) => {
 
         reply:
           "NEXA-AL şu anda cevap oluşturamadı. " +
-          "Bir kez daha deneyelim."
+          "Tekrar deneyelim."
 
       });
-
     }
 
 
@@ -293,28 +291,22 @@ module.exports = async (req, res) => {
 
     return res.status(200).json({
 
-      reply: reply
+      reply
 
     });
 
 
   } catch (error) {
 
-    // =========================
-    // SUNUCU HATASI
-    // =========================
-
     console.error(
       "NEXA-AL sunucu hatası:",
       error
     );
 
-
     return res.status(500).json({
 
       error:
-        "NEXA-AL AI bağlantısında bir sorun oluştu. " +
-        "Lütfen biraz sonra tekrar dene."
+        "NEXA-AL AI bağlantısında bir sorun oluştu."
 
     });
 
