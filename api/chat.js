@@ -1,3 +1,4 @@
+console.log("NEXA-AL YENİ CHAT.JS ÇALIŞIYOR - GEMINI 3.5 FLASH LITE");
 module.exports = async (req, res) => {
 
   // =========================
