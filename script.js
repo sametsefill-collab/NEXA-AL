@@ -13,326 +13,204 @@ document.addEventListener("DOMContentLoaded", function () {
   const input = document.getElementById("nexaAiInput");
   const messages = document.getElementById("nexaAiMessages");
 
-
-  /* =========================================
-     NEXA-AL HAFIZA
-  ========================================= */
-
+  // NEXA-AL konuşma hafızası
   let conversationHistory = [];
 
-  try {
 
-    const savedHistory =
-      localStorage.getItem("nexaAlHistory");
-
-    if (savedHistory) {
-
-      conversationHistory =
-        JSON.parse(savedHistory);
-
-      console.log(
-        "NEXA-AL hafızası yüklendi:",
-        conversationHistory
-      );
-
-    }
-
-  } catch (error) {
-
-    console.error(
-      "Hafıza yüklenemedi:",
-      error
-    );
-
-    conversationHistory = [];
-
-  }
-
-
-  function saveHistory() {
-
-    try {
-
-      localStorage.setItem(
-        "nexaAlHistory",
-        JSON.stringify(conversationHistory)
-      );
-
-    } catch (error) {
-
-      console.error(
-        "Hafıza kaydedilemedi:",
-        error
-      );
-
-    }
-
-  }
-
-
-  /* =========================================
-     AI PANELİNİ AÇ
-  ========================================= */
+  /* AI PANELİNİ AÇ */
 
   function openAiPanel() {
 
     if (!panel) {
-
-      console.error(
-        "NEXA-AL AI paneli bulunamadı."
-      );
-
+      console.error("NEXA-AL AI paneli bulunamadı.");
       return;
-
     }
 
     panel.classList.add("active");
 
     if (input) {
-
       setTimeout(function () {
-
         input.focus();
-
       }, 100);
-
     }
-
   }
 
 
-  /* =========================================
-     BAŞLA BUTONU
-  ========================================= */
+  /* BAŞLA BUTONU */
 
   if (startBtn) {
-
-    startBtn.addEventListener(
-      "click",
-      function () {
-
-        console.log(
-          "Başla butonuna basıldı."
-        );
-
-        openAiPanel();
-
-      }
-    );
-
+    startBtn.addEventListener("click", function () {
+      console.log("Başla butonuna basıldı.");
+      openAiPanel();
+    });
   }
 
 
-  /* =========================================
-     AI BUTONU
-  ========================================= */
+  /* AI'I AÇ BUTONU */
 
   if (aiBtn) {
-
-    aiBtn.addEventListener(
-      "click",
-      function () {
-
-        openAiPanel();
-
-      }
-    );
-
+    aiBtn.addEventListener("click", function () {
+      openAiPanel();
+    });
   }
 
 
-  /* =========================================
-     KEŞFET
-  ========================================= */
+  /* KEŞFET BUTONU */
 
   if (exploreBtn) {
 
-    exploreBtn.addEventListener(
-      "click",
-      function () {
+    exploreBtn.addEventListener("click", function () {
 
-        const features =
-          document.querySelector(".features");
+      const features = document.querySelector(".features");
 
-        if (features) {
-
-          features.scrollIntoView({
-            behavior: "smooth"
-          });
-
-        }
-
+      if (features) {
+        features.scrollIntoView({
+          behavior: "smooth"
+        });
       }
-    );
+
+    });
 
   }
 
 
-  /* =========================================
-     AI KAPAT
-  ========================================= */
+  /* AI KAPAT */
 
   if (closeBtn && panel) {
 
-    closeBtn.addEventListener(
-      "click",
-      function () {
-
-        panel.classList.remove("active");
-
-      }
-    );
+    closeBtn.addEventListener("click", function () {
+      panel.classList.remove("active");
+    });
 
   }
 
 
-  /* =========================================
-     PANEL DIŞINA TIKLAMA
-  ========================================= */
+  /* PANEL DIŞINA TIKLAMA */
 
   if (panel) {
 
-    panel.addEventListener(
-      "click",
-      function (event) {
+    panel.addEventListener("click", function (event) {
 
-        if (event.target === panel) {
-
-          panel.classList.remove("active");
-
-        }
-
+      if (event.target === panel) {
+        panel.classList.remove("active");
       }
-    );
+
+    });
 
   }
 
 
-  /* =========================================
-     MESAJ EKLE
-  ========================================= */
+  /* MESAJ EKLE */
 
   function addMessage(text, type) {
 
     if (!messages) return;
 
-    const message =
-      document.createElement("div");
+    const message = document.createElement("div");
 
-    message.className =
-      "nexa-msg " + type;
-
+    message.className = "nexa-msg " + type;
     message.textContent = text;
 
     messages.appendChild(message);
 
-    messages.scrollTop =
-      messages.scrollHeight;
-
+    messages.scrollTop = messages.scrollHeight;
   }
 
 
-  /* =========================================
-     KAYITLI MESAJLARI EKRANA GETİR
-  ========================================= */
-
-  function restoreMessages() {
-
-    if (!messages) return;
-
-    conversationHistory.forEach(
-      function (item) {
-
-        if (
-          item.role === "user"
-        ) {
-
-          addMessage(
-            item.content,
-            "user"
-          );
-
-        }
-
-        if (
-          item.role === "assistant"
-        ) {
-
-          addMessage(
-            item.content,
-            "ai"
-          );
-
-        }
-
-      }
-    );
-
-  }
-
-
-  restoreMessages();
-
-
-  /* =========================================
-     API CEVABI
-  ========================================= */
+  /* API'DEN CEVAP AL */
 
   async function getAnswer(text) {
 
     try {
 
-      const response =
-        await fetch("/api/chat", {
+      const response = await fetch("/api/chat", {
 
-          method: "POST",
+        method: "POST",
 
-          headers: {
-            "Content-Type":
-              "application/json"
-          },
+        headers: {
+          "Content-Type": "application/json"
+        },
 
-          body: JSON.stringify({
+        body: JSON.stringify({
 
-            message: text,
+          message: text,
 
-            history:
-              conversationHistory
+          history: conversationHistory
 
-          })
+        })
 
-        });
+      });
+
+
+      const data = await response.json();
 
 
       if (!response.ok) {
 
         throw new Error(
-          "Sunucu hatası: " +
-          response.status
+          data?.error || "Sunucu hatası: " + response.status
         );
 
       }
 
 
-      const data =
-        await response.json();
-
-
-      return data.reply ||
+      const reply =
+        data.reply ||
         "NEXA-AL şu anda cevap veremiyor.";
 
 
-    } catch (error) {
+      // Kullanıcı mesajını hafızaya ekle
+      conversationHistory.push({
+
+        role: "user",
+
+        parts: [
+          {
+            text: text
+          }
+        ]
+
+      });
+
+
+      // AI cevabını hafızaya ekle
+      conversationHistory.push({
+
+        role: "model",
+
+        parts: [
+          {
+            text: reply
+          }
+        ]
+
+      });
+
+
+      // Hafızanın sonsuza kadar büyümesini engelle
+      if (conversationHistory.length > 30) {
+
+        conversationHistory =
+          conversationHistory.slice(-30);
+
+      }
+
+
+      return reply;
+
+
+    }
+
+    catch (error) {
 
       console.error(
         "NEXA-AL AI hatası:",
         error
       );
 
-
       return (
-        "Üzgünüm, AI bağlantısında " +
-        "bir sorun oluştu."
+        "Üzgünüm, AI bağlantısında bir sorun oluştu. " +
+        "Lütfen biraz sonra tekrar dene."
       );
 
     }
@@ -340,47 +218,24 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
 
-  /* =========================================
-     MESAJ GÖNDER
-  ========================================= */
+  /* MESAJ GÖNDER */
 
   async function sendMessage() {
 
     if (!input) return;
 
-    const text =
-      input.value.trim();
+    const text = input.value.trim();
 
     if (!text) return;
 
 
-    /* Kullanıcı mesajını ekle */
-
-    addMessage(
-      text,
-      "user"
-    );
-
+    // Kullanıcı mesajını göster
+    addMessage(text, "user");
 
     input.value = "";
 
 
-    /* Kullanıcı mesajını hafızaya ekle */
-
-    conversationHistory.push({
-
-      role: "user",
-
-      content: text
-
-    });
-
-
-    saveHistory();
-
-
-    /* Düşünüyor mesajı */
-
+    // Düşünüyor mesajı
     const loadingMessage =
       document.createElement("div");
 
@@ -403,54 +258,24 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
 
-    /* AI cevabı */
-
+    // API
     const answer =
       await getAnswer(text);
 
 
-    /* Düşünüyor mesajını kaldır */
-
+    // Düşünüyor yazısını kaldır
     if (loadingMessage) {
-
       loadingMessage.remove();
-
     }
 
 
-    /* AI cevabını ekrana yaz */
-
-    addMessage(
-      answer,
-      "ai"
-    );
-
-
-    /* AI cevabını hafızaya ekle */
-
-    conversationHistory.push({
-
-      role: "assistant",
-
-      content: answer
-
-    });
-
-
-    saveHistory();
-
-
-    console.log(
-      "NEXA-AL hafızası güncellendi:",
-      conversationHistory
-    );
+    // AI cevabını göster
+    addMessage(answer, "ai");
 
   }
 
 
-  /* =========================================
-     GÖNDER BUTONU
-  ========================================= */
+  /* GÖNDER BUTONU */
 
   if (sendBtn) {
 
@@ -462,9 +287,7 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
 
-  /* =========================================
-     ENTER İLE GÖNDER
-  ========================================= */
+  /* ENTER İLE GÖNDER */
 
   if (input) {
 
@@ -489,9 +312,7 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
 
-  /* =========================================
-     MENÜ
-  ========================================= */
+  /* MENÜ */
 
   if (menuBtn) {
 
