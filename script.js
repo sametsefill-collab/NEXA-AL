@@ -13,6 +13,10 @@ document.addEventListener("DOMContentLoaded", function () {
   const input = document.getElementById("nexaAiInput");
   const messages = document.getElementById("nexaAiMessages");
 
+  /* NEXA-AL SOHBET HAFIZASI */
+
+  let chatHistory = [];
+
 
   /* AI PANELİNİ AÇ */
 
@@ -132,7 +136,7 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
 
-  /* OPENAI / API CEVABI */
+  /* AI CEVABI */
 
   async function getAnswer(text) {
 
@@ -147,7 +151,11 @@ document.addEventListener("DOMContentLoaded", function () {
         },
 
         body: JSON.stringify({
-          message: text
+
+          message: text,
+
+          history: chatHistory
+
         })
 
       });
@@ -194,28 +202,38 @@ document.addEventListener("DOMContentLoaded", function () {
     if (!text) return;
 
 
+    /* KULLANICI MESAJINI GÖSTER */
+
     addMessage(text, "user");
 
     input.value = "";
 
 
+    /* YÜKLENİYOR */
+
     const loadingMessage = document.createElement("div");
 
     loadingMessage.className = "nexa-msg ai";
 
-    loadingMessage.textContent = "NEXA-AL düşünüyor...";
+    loadingMessage.textContent =
+      "NEXA-AL düşünüyor...";
 
     if (messages) {
 
       messages.appendChild(loadingMessage);
 
-      messages.scrollTop = messages.scrollHeight;
+      messages.scrollTop =
+        messages.scrollHeight;
 
     }
 
 
+    /* AI CEVABI AL */
+
     const answer = await getAnswer(text);
 
+
+    /* YÜKLENİYOR MESAJINI SİL */
 
     if (loadingMessage) {
 
@@ -224,7 +242,43 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
 
+    /* AI CEVABINI GÖSTER */
+
     addMessage(answer, "ai");
+
+
+    /* HAFIZAYA KAYDET */
+
+    chatHistory.push({
+
+      role: "user",
+
+      parts: [
+        {
+          text: text
+        }
+      ]
+
+    });
+
+
+    chatHistory.push({
+
+      role: "model",
+
+      parts: [
+        {
+          text: answer
+        }
+      ]
+
+    });
+
+
+    console.log(
+      "NEXA-AL hafızası:",
+      chatHistory
+    );
 
   }
 
