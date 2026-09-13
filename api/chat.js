@@ -1,4 +1,5 @@
-console.log("NEXA-AL YENİ CHAT.JS ÇALIŞIYOR - GEMINI 3.5 FLASH LITE");
+console.log("NEXA-AL CHAT.JS AKTİF - GEMINI 3.5 FLASH LITE");
+
 module.exports = async (req, res) => {
 
   // =========================
@@ -86,7 +87,7 @@ module.exports = async (req, res) => {
 
 
     // =========================
-    // KONUŞMA GEÇMİŞİ
+    // TEMİZ KONUŞMA GEÇMİŞİ
     // =========================
 
     let cleanHistory = [];
@@ -102,7 +103,21 @@ module.exports = async (req, res) => {
           ) &&
           Array.isArray(item.parts)
         )
-        .slice(-20);
+        .map(item => ({
+          role: item.role,
+          parts: item.parts
+            .filter(part =>
+              part &&
+              typeof part.text === "string"
+            )
+            .map(part => ({
+              text: part.text
+            }))
+        }))
+        .filter(item =>
+          item.parts.length > 0
+        )
+        .slice(-30);
 
     }
 
@@ -127,7 +142,63 @@ module.exports = async (req, res) => {
 
 
     // =========================
-    // GEMINI 3.5 FLASH-LITE
+    // NEXA-AL KİŞİLİĞİ
+    // =========================
+
+    const systemInstruction = `
+Sen NEXA-AL adlı akıllı dijital asistansın.
+
+Kullanıcıyla Türkçe konuş.
+
+KİŞİLİK:
+- Samimi
+- Doğal
+- Yardımcı
+- Anlaşılır
+- Gereksiz uzun konuşmayan
+- Kullanıcının konuşma tarzına uyum sağlayan
+- Gerektiğinde hafif esprili
+
+HAFIZA KURALI:
+Konuşma geçmişinde kullanıcı kendisi hakkında bir bilgi verdiyse
+ve bu bilgi mevcut geçmişte görünüyorsa onu hatırla ve sonraki
+cevaplarda kullan.
+
+Özellikle kullanıcının adı gibi açıkça söylediği bilgileri
+unutmuş gibi davranma.
+
+Örneğin kullanıcı:
+"Benim adım Samet."
+
+dediyse ve sonraki mesajlarda bu bilgi geçmişte bulunuyorsa
+kullanıcı "Benim adım ne?" diye sorduğunda:
+
+"Adın Samet."
+
+şeklinde doğrudan cevap ver.
+
+Kullanıcı daha önce söylediği bir şeyi tekrar soruyorsa,
+cevabı konuşma geçmişinden bulmaya çalış.
+
+Geçmişte bilgi yoksa o bilgiyi biliyormuş gibi uydurma.
+
+ÖNEMLİ:
+Kullanıcının daha önce söylediği bilgileri tekrar tekrar sorma.
+
+Kısa sorulara kısa ve net cevap ver.
+
+Kullanıcı bir konu hakkında ayrıntı istiyorsa gerektiği kadar
+ayrıntılı cevap ver.
+
+Kullanıcıya her cevapta "Samet" diye hitap etmek zorunda değilsin.
+Doğal olduğu zaman kullan.
+
+Sen NEXA-AL'sın.
+`;
+
+
+    // =========================
+    // GEMINI API
     // =========================
 
     const response = await fetch(
@@ -151,31 +222,9 @@ module.exports = async (req, res) => {
           system_instruction: {
 
             parts: [
-
               {
-                text:
-                  "Sen NEXA-AL adlı Türkçe konuşan " +
-                  "akıllı dijital asistansın. " +
-
-                  "Kullanıcıya Türkçe, anlaşılır, " +
-                  "samimi ve faydalı cevaplar ver. " +
-
-                  "Konuşma geçmişini dikkate al. " +
-
-                  "Kullanıcının adını, tercihlerini ve " +
-                  "daha önce söylediği bilgileri " +
-                  "geçmişte görüyorsan hatırla. " +
-
-                  "Önceki konuşmalarla bağlantılı " +
-                  "sorulara tutarlı cevaplar ver. " +
-
-                  "Gereksiz yere aynı soruları tekrar sorma. " +
-
-                  "Kısa sorulara kısa ve net cevap ver. " +
-
-                  "Samimi, doğal ve yardımcı ol."
+                text: systemInstruction
               }
-
             ]
 
           },
@@ -189,7 +238,7 @@ module.exports = async (req, res) => {
 
 
     // =========================
-    // GEMINI CEVABI
+    // API CEVABI
     // =========================
 
     const data =
@@ -203,13 +252,13 @@ module.exports = async (req, res) => {
 
 
     // =========================
-    // KOTA
+    // KOTA / RATE LIMIT
     // =========================
 
     if (response.status === 429) {
 
       console.error(
-        "Gemini kota hatası:",
+        "Gemini kota/rate limit:",
         data
       );
 
@@ -224,7 +273,7 @@ module.exports = async (req, res) => {
 
 
     // =========================
-    // DİĞER API HATALARI
+    // DİĞER GEMINI HATALARI
     // =========================
 
     if (!response.ok) {
@@ -251,7 +300,7 @@ module.exports = async (req, res) => {
 
 
     // =========================
-    // CEVABI AL
+    // CEVABI ÇIKAR
     // =========================
 
     const reply =
@@ -273,7 +322,11 @@ module.exports = async (req, res) => {
 
       console.error(
         "Gemini boş cevap:",
-        data
+        JSON.stringify(
+          data,
+          null,
+          2
+        )
       );
 
       return res.status(200).json({
@@ -289,6 +342,10 @@ module.exports = async (req, res) => {
     // =========================
     // BAŞARILI
     // =========================
+
+    console.log(
+      "NEXA-AL cevap oluşturdu."
+    );
 
     return res.status(200).json({
 
