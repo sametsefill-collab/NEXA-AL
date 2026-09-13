@@ -15,38 +15,52 @@ module.exports = async (req, res) => {
     const { message } = req.body || {};
 
     if (!message) {
-      return res.status(400).json({ error: "Mesaj boş." });
+      return res.status(400).json({ error: "Mesaj gerekli." });
     }
 
-    const response = await fetch("https://api.openai.com/v1/responses", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`
-      },
-      body: JSON.stringify({
-        model: "gpt-5.6-luna",
-        instructions:
-          "Sen NEXA-AL adlı Türkçe konuşan bir yapay zeka asistanısın. Kullanıcıya doğal, yardımcı ve anlaşılır cevaplar ver.",
-        input: message
-      })
-    });
+    const response = await fetch(
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": process.env.GEMINI_API_KEY
+        },
+        body: JSON.stringify({
+          system_instruction: {
+            parts: [
+              {
+                text: "Sen NEXA-AL adlı Türkçe konuşan akıllı dijital asistansın. Kullanıcıya Türkçe, anlaşılır, samimi ve faydalı cevaplar ver."
+              }
+            ]
+          },
+          contents: [
+            {
+              role: "user",
+              parts: [
+                {
+                  text: message
+                }
+              ]
+            }
+          ]
+        })
+      }
+    );
 
     const data = await response.json();
 
     if (!response.ok) {
-  console.error(data);
-  return res.status(response.status).json({
-    error: data?.error?.message || "OpenAI bağlantı hatası."
-  });
-}
-    
+      console.error(data);
+      return res.status(response.status).json({
+        error: data?.error?.message || "Gemini API hatası."
+      });
+    }
+
     const reply =
-      data.output
-        ?.flatMap(item => item.content || [])
-        ?.filter(item => item.type === "output_text")
-        ?.map(item => item.text)
-        ?.join("") ||
+      data?.candidates?.[0]?.content?.parts
+        ?.map(part => part.text || "")
+        .join("") ||
       "NEXA-AL cevap oluşturamadı.";
 
     return res.status(200).json({ reply });
