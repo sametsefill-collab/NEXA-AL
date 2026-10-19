@@ -229,9 +229,15 @@ Sen NEXA-AL'sın.
 
           },
 
-          contents
+               contents,
 
-        })
+      tools: [
+        {
+          google_search: {}
+        }
+      ]
+
+    }) 
 
       }
     );
