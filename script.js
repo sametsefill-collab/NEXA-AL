@@ -1,666 +1,320 @@
-document.addEventListener("DOMContentLoaded", function () {
 
-  console.log("NEXA-AL başlatıldı.");
+document.addEventListener("DOMContentLoaded", function () {
+  console.log("NEXA-AL hafıza sistemi başlatıldı.");
 
   const startBtn = document.getElementById("startBtn");
   const aiBtn = document.getElementById("aiBtn");
   const exploreBtn = document.getElementById("exploreBtn");
   const menuBtn = document.getElementById("menuBtn");
-
   const panel = document.getElementById("nexaAiPanel");
   const closeBtn = document.getElementById("nexaAiClose");
   const sendBtn = document.getElementById("nexaAiSend");
   const input = document.getElementById("nexaAiInput");
   const messages = document.getElementById("nexaAiMessages");
 
-
-  /* =========================
-     AYARLAR
-  ========================= */
-
-  const STORAGE_KEY = "nexa_al_history";
-
-  // Hafızanın gereksiz büyümesini engeller.
-  // 12 mesaj = yaklaşık 6 kullanıcı + 6 AI mesajı.
-  const MAX_HISTORY = 12;
+  const HISTORY_KEY = "nexa_al_history";
+  const MEMORY_KEY = "nexa_al_memory";
+  const MAX_HISTORY = 40;
 
   let history = [];
   let isSending = false;
 
+  // İlk kullanım için başlangıç bilgileri.
+  // Bu bilgiler yalnızca bu tarayıcıda saklanır.
+  const defaultMemory = [
+    "Kullanıcının lojistik sektöründe yaklaşık 13 yıl 4 ay deneyimi var.",
+    "Kullanıcı 10.04.2013 tarihinde MNG Kargo'da işe başladı ve 01.08.2026 tarihinde ayrıldı.",
+    "Kullanıcı müşteri hizmetleri, şube yönetimi ve operasyon yöneticiliği yaptı.",
+    "Kullanıcı Arvento araç takip sistemi, CRM, Excel ve filo operasyonları konusunda deneyimli.",
+    "Kullanıcı Türkçe iletişim tercih ediyor."
+  ];
 
-  /* =========================
-     KONUŞMA HAFIZASINI YÜKLE
-  ========================= */
+  let memory = [];
 
   try {
-
-    const savedHistory =
-      localStorage.getItem(STORAGE_KEY);
-
-    if (savedHistory) {
-
-      const parsedHistory =
-        JSON.parse(savedHistory);
-
-      if (Array.isArray(parsedHistory)) {
-
-        history =
-          parsedHistory
-            .filter(item =>
-              item &&
-              (item.role === "user" ||
-               item.role === "model") &&
-              Array.isArray(item.parts)
-            )
-            .slice(-MAX_HISTORY);
-
-      }
-
-    }
-
-  } catch (error) {
-
-    console.error(
-      "NEXA-AL hafızası okunamadı:",
-      error
+    const savedHistory = JSON.parse(
+      localStorage.getItem(HISTORY_KEY) || "[]"
     );
 
+    if (Array.isArray(savedHistory)) {
+      history = savedHistory
+        .filter(item =>
+          item &&
+          ["user", "model"].includes(item.role) &&
+          Array.isArray(item.parts)
+        )
+        .slice(-MAX_HISTORY);
+    }
+
+    const savedMemory = JSON.parse(
+      localStorage.getItem(MEMORY_KEY) || "null"
+    );
+
+    memory = Array.isArray(savedMemory)
+      ? savedMemory.filter(
+          item => typeof item === "string"
+        ).slice(0, 50)
+      : [...defaultMemory];
+
+    if (!savedMemory) {
+      localStorage.setItem(
+        MEMORY_KEY,
+        JSON.stringify(memory)
+      );
+    }
+  } catch (error) {
+    console.error("Hafıza yüklenemedi:", error);
     history = [];
-
+    memory = [...defaultMemory];
   }
-
-
-  /* =========================
-     HAFIZAYI KAYDET
-  ========================= */
 
   function saveHistory() {
-
     try {
-
-      history =
-        history.slice(-MAX_HISTORY);
-
+      history = history.slice(-MAX_HISTORY);
       localStorage.setItem(
-        STORAGE_KEY,
+        HISTORY_KEY,
         JSON.stringify(history)
       );
-
     } catch (error) {
-
-      console.error(
-        "NEXA-AL hafızası kaydedilemedi:",
-        error
-      );
-
+      console.error("Konuşma geçmişi kaydedilemedi:", error);
     }
-
   }
 
-
-  /* =========================
-     AI PANELİNİ AÇ
-  ========================= */
+  function saveMemory() {
+    try {
+      memory = memory.slice(0, 50);
+      localStorage.setItem(
+        MEMORY_KEY,
+        JSON.stringify(memory)
+      );
+    } catch (error) {
+      console.error("Kullanıcı hafızası kaydedilemedi:", error);
+    }
+  }
 
   function openAiPanel() {
-
-    if (!panel) {
-
-      console.error(
-        "NEXA-AL AI paneli bulunamadı."
-      );
-
-      return;
-
-    }
-
+    if (!panel) return;
     panel.classList.add("active");
-
-    if (input) {
-
-      setTimeout(function () {
-
-        input.focus();
-
-      }, 100);
-
-    }
-
+    if (input) input.focus();
   }
 
-
-  /* =========================
-     BAŞLA BUTONU
-  ========================= */
-
-  if (startBtn) {
-
-    startBtn.addEventListener(
-      "click",
-      function () {
-
-        console.log(
-          "Başla butonuna basıldı."
-        );
-
-        openAiPanel();
-
-      }
-    );
-
-  }
-
-
-  /* =========================
-     AI'I AÇ
-  ========================= */
-
-  if (aiBtn) {
-
-    aiBtn.addEventListener(
-      "click",
-      function () {
-
-        openAiPanel();
-
-      }
-    );
-
-  }
-
-
-  /* =========================
-     KEŞFET
-  ========================= */
+  if (startBtn) startBtn.addEventListener("click", openAiPanel);
+  if (aiBtn) aiBtn.addEventListener("click", openAiPanel);
 
   if (exploreBtn) {
-
-    exploreBtn.addEventListener(
-      "click",
-      function () {
-
-        const features =
-          document.querySelector(".features");
-
-        if (features) {
-
-          features.scrollIntoView({
-            behavior: "smooth"
-          });
-
-        }
-
+    exploreBtn.addEventListener("click", function () {
+      const features = document.querySelector(".features");
+      if (features) {
+        features.scrollIntoView({ behavior: "smooth" });
       }
-    );
-
+    });
   }
-
-
-  /* =========================
-     AI KAPAT
-  ========================= */
 
   if (closeBtn && panel) {
-
-    closeBtn.addEventListener(
-      "click",
-      function () {
-
-        panel.classList.remove("active");
-
-      }
-    );
-
+    closeBtn.addEventListener("click", function () {
+      panel.classList.remove("active");
+    });
   }
-
-
-  /* =========================
-     PANEL DIŞINA TIKLAMA
-  ========================= */
 
   if (panel) {
-
-    panel.addEventListener(
-      "click",
-      function (event) {
-
-        if (event.target === panel) {
-
-          panel.classList.remove("active");
-
-        }
-
+    panel.addEventListener("click", function (event) {
+      if (event.target === panel) {
+        panel.classList.remove("active");
       }
-    );
-
+    });
   }
-
-
-  /* =========================
-     MESAJ EKLE
-  ========================= */
 
   function addMessage(text, type) {
-
     if (!messages) return;
 
-    const message =
-      document.createElement("div");
-
-    message.className =
-      "nexa-msg " + type;
-
-    message.textContent = text;
-
-    messages.appendChild(message);
-
-    messages.scrollTop =
-      messages.scrollHeight;
-
+    const element = document.createElement("div");
+    element.className = "nexa-msg " + type;
+    element.textContent = text;
+    messages.appendChild(element);
+    messages.scrollTop = messages.scrollHeight;
   }
 
+  // Mevcut tarayıcıdaki konuşmaları ekranda göster.
+  if (messages && history.length > 0) {
+    messages.innerHTML = "";
 
-  /* =========================
-     API'DEN CEVAP AL
-  ========================= */
+    history.forEach(item => {
+      const text = item.parts
+        .map(part => part.text || "")
+        .join("");
 
-  async function getAnswer(text, oldHistory) {
-
-    const response = await fetch(
-      "/api/chat",
-      {
-        method: "POST",
-
-        headers: {
-          "Content-Type": "application/json"
-        },
-
-        body: JSON.stringify({
-
-          message: text,
-
-          history: oldHistory
-
-        })
-
+      if (text) {
+        addMessage(
+          text,
+          item.role === "user" ? "user" : "ai"
+        );
       }
-    );
+    });
+  }
 
+  async function getAnswer(text) {
+    const response = await fetch("/api/chat", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        message: text,
+        history: history.slice(-MAX_HISTORY),
+        memory: memory
+      })
+    });
 
     let data = {};
 
     try {
-
       data = await response.json();
-
     } catch (error) {
-
-      console.error(
-        "API cevabı JSON değil:",
-        error
-      );
-
+      console.error("Sunucu yanıtı okunamadı:", error);
     }
-
 
     if (!response.ok) {
-
-      console.error(
-        "NEXA-AL API hatası:",
-        data
+      const error = new Error(
+        data.error || "Sunucu hatası."
       );
-
-      const error =
-        new Error(
-          data?.error ||
-          "Sunucu hatası."
-        );
-
-      error.status =
-        response.status;
-
+      error.status = response.status;
       throw error;
-
     }
 
-
     return data.reply ||
-      "NEXA-AL şu anda cevap oluşturamadı.";
-
+      "NEXA-AL bu istekte cevap oluşturamadı.";
   }
 
-
-  /* =========================
-     MESAJ GÖNDER
-  ========================= */
-
   async function sendMessage() {
+    if (!input || isSending) return;
 
-    if (!input) return;
-
-    // Aynı anda iki istek gönderilmesini engeller.
-    if (isSending) return;
-
-
-    const text =
-      input.value.trim();
-
-
+    const text = input.value.trim();
     if (!text) return;
-
 
     isSending = true;
 
-
-    // Butonu geçici olarak pasifleştir.
     if (sendBtn) {
-
       sendBtn.disabled = true;
       sendBtn.style.opacity = "0.5";
-
     }
 
-
-    // Kullanıcı mesajını ekrana göster.
-    addMessage(
-      text,
-      "user"
-    );
-
-
+    addMessage(text, "user");
     input.value = "";
 
-
-    /*
-     * API'YE GÖNDERECEĞİMİZ GEÇMİŞ
-     *
-     * Yeni kullanıcı mesajını burada
-     * history'ye eklemiyoruz.
-     *
-     * Çünkü /api/chat zaten mevcut
-     * mesajı kendisi contents'e ekliyor.
-     */
-
-    const oldHistory =
-      history.slice(-MAX_HISTORY);
-
-
-    /* =========================
-       YÜKLENİYOR
-    ========================= */
-
-    const loadingMessage =
-      document.createElement("div");
-
-    loadingMessage.className =
-      "nexa-msg ai";
-
-    loadingMessage.textContent =
-      "NEXA-AL düşünüyor...";
-
+    const loading = document.createElement("div");
+    loading.className = "nexa-msg ai";
+    loading.textContent = "NEXA-AL düşünüyor...";
 
     if (messages) {
-
-      messages.appendChild(
-        loadingMessage
-      );
-
-      messages.scrollTop =
-        messages.scrollHeight;
-
+      messages.appendChild(loading);
+      messages.scrollTop = messages.scrollHeight;
     }
 
+    // Önceki geçmişi istekten önce koru.
+    const previousHistory = [...history];
 
     try {
+      const answer = await getAnswer(text);
 
-      /*
-       * TEK API ÇAĞRISI
-       */
-
-      const answer =
-        await getAnswer(
-          text,
-          oldHistory
-        );
-
-
-      /* Loading kaldır */
-
-      if (loadingMessage) {
-
-        loadingMessage.remove();
-
-      }
-
-
-      /* AI cevabını ekrana yaz */
-
-      addMessage(
-        answer,
-        "ai"
-      );
-
-
-      /*
-       * API BAŞARILI OLDU.
-       *
-       * Ancak şimdi hafızaya ekliyoruz.
-       */
+      if (loading.parentNode) loading.remove();
+      addMessage(answer, "ai");
 
       history.push({
-
         role: "user",
-
-        parts: [
-          {
-            text: text
-          }
-        ]
-
+        parts: [{ text }]
       });
-
 
       history.push({
-
         role: "model",
-
-        parts: [
-          {
-            text: answer
-          }
-        ]
-
+        parts: [{ text: answer }]
       });
 
-
-      /*
-       * Sadece son MAX_HISTORY
-       * mesajı sakla.
-       */
-
-      history =
-        history.slice(-MAX_HISTORY);
-
-
+      history = history.slice(-MAX_HISTORY);
       saveHistory();
 
-
     } catch (error) {
+      if (loading.parentNode) loading.remove();
 
-      /* Loading kaldır */
+      // Başarısız mesajı konuşma geçmişine ekleme.
+      history = previousHistory;
 
-      if (loadingMessage) {
+      console.error("NEXA-AL hatası:", error);
 
-        loadingMessage.remove();
-
-      }
-
-
-      console.error(
-        "NEXA-AL bağlantı hatası:",
-        error
-      );
-
-
-      let errorMessage =
-        "Üzgünüm, AI bağlantısında geçici bir sorun oluştu.";
-
-
-      /*
-       * KOTA HATASI
-       */
+      let message =
+        "NEXA-AL bağlantısında geçici bir sorun oluştu.";
 
       if (error.status === 429) {
-
-        errorMessage =
-          "NEXA-AL şu anda yoğun kullanım nedeniyle " +
-          "kısa süreliğine beklemede. ⏳\n\n" +
-          "Biraz sonra tekrar deneyebilirsin.";
-
+        message =
+          "Ücretsiz kullanım kotası dolmuş olabilir. " +
+          "Biraz sonra tekrar dene.";
+      } else if (error.status === 503) {
+        message =
+          "Google modeli şu anda yoğun. Biraz sonra tekrar dene.";
+      } else if (error.status >= 500) {
+        message =
+          "NEXA-AL sunucusunda geçici bir sorun oluştu.";
       }
 
-
-      /*
-       * Diğer sunucu hataları
-       */
-
-      else if (
-        error.status >= 500
-      ) {
-
-        errorMessage =
-          "NEXA-AL sunucusunda geçici bir sorun oluştu. " +
-          "Lütfen biraz sonra tekrar dene.";
-
-      }
-
-
-      addMessage(
-        errorMessage,
-        "ai"
-      );
-
-
-      /*
-       * ÖNEMLİ:
-       *
-       * Hata alan mesajı hafızaya
-       * KAYDETMİYORUZ.
-       */
-
-    }
-
-
-    finally {
-
+      addMessage(message, "ai");
+    } finally {
       isSending = false;
 
-
       if (sendBtn) {
-
         sendBtn.disabled = false;
         sendBtn.style.opacity = "1";
-
       }
 
-
-      if (input) {
-
-        input.focus();
-
-      }
-
+      if (input) input.focus();
     }
-
   }
-
-
-  /* =========================
-     GÖNDER BUTONU
-  ========================= */
 
   if (sendBtn) {
-
-    sendBtn.addEventListener(
-      "click",
-      sendMessage
-    );
-
+    sendBtn.addEventListener("click", sendMessage);
   }
-
-
-  /* =========================
-     ENTER
-  ========================= */
 
   if (input) {
-
-    input.addEventListener(
-      "keydown",
-      function (event) {
-
-        if (
-          event.key === "Enter" &&
-          !event.shiftKey
-        ) {
-
-          event.preventDefault();
-
-          sendMessage();
-
-        }
-
+    input.addEventListener("keydown", function (event) {
+      if (event.key === "Enter" && !event.shiftKey) {
+        event.preventDefault();
+        sendMessage();
       }
-    );
-
+    });
   }
-
-
-  /* =========================
-     MENÜ
-  ========================= */
 
   if (menuBtn) {
-
-    menuBtn.addEventListener(
-      "click",
-      function () {
-
-        alert(
-          "NEXA-AL menüsü yakında aktif olacak. 🚀"
-        );
-
-      }
-    );
-
+    menuBtn.addEventListener("click", function () {
+      alert("NEXA-AL menüsü yakında aktif olacak. 🚀");
+    });
   }
 
+  // İleride kullanıcı bilgilerini eklemek veya düzeltmek için.
+  window.addNexaMemory = function (fact) {
+    if (typeof fact !== "string" || !fact.trim()) return;
 
-  /* =========================
-     HAFIZAYI TEMİZLEME
-  ========================= */
+    const normalized = fact.trim();
 
-  window.clearNexaMemory =
-    function () {
+    if (!memory.includes(normalized)) {
+      memory.push(normalized);
+      saveMemory();
+    }
+  };
 
-      history = [];
+  window.clearNexaMemory = function () {
+    history = [];
+    memory = [];
 
-      localStorage.removeItem(
-        STORAGE_KEY
-      );
+    localStorage.removeItem(HISTORY_KEY);
+    localStorage.removeItem(MEMORY_KEY);
 
-      console.log(
-        "NEXA-AL hafızası temizlendi."
-      );
+    if (messages) messages.innerHTML = "";
 
-    };
-
+    console.log("NEXA-AL hafızası temizlendi.");
+  };
 
   console.log(
-    "NEXA-AL hafızası yüklendi:",
+    "NEXA-AL hazır. Konuşma:",
     history.length,
-    "mesaj"
+    "mesaj; kayıtlı bilgi:",
+    memory.length
   );
-
-
 });
