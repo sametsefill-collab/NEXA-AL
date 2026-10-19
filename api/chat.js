@@ -264,8 +264,8 @@ Sen NEXA-AL'sın.
     if (response.status === 429) {
 
       console.error(
-        "Gemini kota/rate limit:",
-        data
+  "Gemini kota/rate limit:",
+  JSON.stringify(data, null, 2)
       );
 
       return res.status(429).json({
